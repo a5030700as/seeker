@@ -1,0 +1,3 @@
+/home/snail/vs_code/exciese01/seeker/workspace/CMakeFiles/rebuild_cache.dir
+/home/snail/vs_code/exciese01/seeker/workspace/CMakeFiles/edit_cache.dir
+/home/snail/vs_code/exciese01/seeker/workspace/CMakeFiles/main.dir
