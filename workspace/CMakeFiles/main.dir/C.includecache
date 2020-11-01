@@ -11,4 +11,6 @@ stdio.h
 -
 unistd.h
 -
+curl/curl.h
+-
 
