@@ -26,4 +26,5 @@ do
         echo "ready for reboot"
     fi    
     sleep 1
+    times=0
 done
