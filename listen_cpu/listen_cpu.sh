@@ -10,7 +10,9 @@ counter=0
 for ((;;))
 do 
     echo  hello cpu
-    times=`top -b -n 1 | grep "^%[Cc]pu" | awk '$2+$4 >= 0.3 {print "1"; }'`
+    #times=`top -b -n 1 | grep "^%[Cc]pu" | awk '$2+$4 >= 0.3 {print "1"; }'`
+    times=`top -b -n 1 | grep "^[Cc][pP][uU]" | awk '{if($2+$4 >= 90.5) print "1"; else print "0";}'` 
+    
     echo $times
     
     #top -b -n 1 | grep "^%[Cc]pu" | awk '$2+$4 >= 0.3 {print "cpu超出了"; system("wodiu=5")}'
