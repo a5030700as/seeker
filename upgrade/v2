@@ -355,3 +355,125 @@ int backup_file(void)
     return 0;
 
 }
+
+
+int upgrade_file(void)
+{
+    char buff[200] = {0};
+    char cmd_buff[200] = {0};
+    char file[100];
+    int i = 0;
+ 
+    //get_files(g_update.tar_dir, "upgrade.txt");
+
+    strcpy(file, g_update.tar_dir);
+    strcat(file, "upgrade.txt");
+    FILE *updata_file = fopen(file,"r+");
+
+    char *base_name = NULL;
+    int index = 0;
+
+    while ( fgets(buff, 200, updata_file) != NULL) 
+    {
+        printf("%s\n",buff);
+        index = strlen(buff);
+        if (buff[index - 1] == '\n')
+            buff[index - 1] = 0;
+        base_name = basename(buff);
+
+        if (access(buff, F_OK) != -1)
+        {
+            sprintf(cmd_buff, "cp -rvf %s%s %s",  g_update.tar_dir, base_name, buff);
+            system(cmd_buff);                  
+        }          
+    }
+    fclose(updata_file);  
+    return 0;
+
+}
+
+int backup_file(void)
+{
+    char buff[200] = {0};
+    char cmd_buff[200] = {0};
+    char file[100];
+    int i = 0;
+
+    //get_files(g_update.tar_dir, "upgrade.txt");
+    mkdir(g_update.tar_dir, 0775);
+    
+    strcpy(file, g_update.tar_dir);
+    strcat(file, "upgrade.txt");
+    FILE *updata_file = fopen(file,"r+");
+
+    strcpy(file, g_update.back_up_dir);
+    strcat(file, "backup.txt");
+    FILE *bak_file = fopen(file,"w+");
+
+    char *base_name = NULL;
+    int index = 0;
+
+    while ( fgets(buff, 200, updata_file) != NULL) 
+    {
+        index = strlen(buff);
+        if (buff[index - 1] == '\n')
+            buff[index - 1] = 0;
+
+        base_name = basename(buff);
+        if (access(buff, F_OK) != -1)
+        {
+            printf("%s\n",buff);
+            sprintf(cmd_buff, "cp -rvf %s %s%s", buff, g_update.back_up_dir ,base_name);
+            system(cmd_buff);
+            
+            strcat(buff,"\n");
+            fputs(buff, bak_file);            
+        }          
+    }
+    fputs("/cunstor/aa/bb/aa.xml\n", bak_file);
+    fclose(bak_file);
+    fclose(updata_file);  
+    return 0;
+
+}
+
+int back_2_verstion(void)
+{
+     char buff[200] = {0};
+    char cmd_buff[200] = {0};
+    char file[100];
+    int i = 0;
+ 
+    //get_files(g_update.tar_dir, "upgrade.txt");
+
+    strcpy(file, g_update.back_up_dir);
+    strcat(file, "backup.txt");
+    FILE *bak_file = fopen(file,"r+");
+
+    char *base_name = NULL;
+    int index = 0;
+
+    while ( fgets(buff, 200, bak_file) != NULL) 
+    {
+        printf("%s\n",buff);
+        index = strlen(buff);
+        if (buff[index - 1] == '\n')
+            buff[index - 1] = 0;
+        base_name = basename(buff);
+
+        if (access(buff, F_OK) != -1)
+        {
+            sprintf(cmd_buff, "cp -rvf %s%s %s",  g_update.back_up_dir, base_name, buff);
+            system(cmd_buff);                  
+        }          
+    }
+    fclose(bak_file);  
+    return 0;   
+    
+}
+
+
+
+
+
+
