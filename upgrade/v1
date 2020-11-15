@@ -1,0 +1,380 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <libgen.h>
+
+#include "scan_files.h"
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+char files_list[50][100];
+int file_counter = 0;
+
+int scan_counter = 0;
+char scan_path[10][100] = {
+    {"/cumstor/"},
+    {"/cumstor/aa/"},
+    {"/cumstor/bb/"},
+    {"../../test_shell_mode"},
+    {0},
+};
+
+#define TAR_PATH    "./tar_dir/"
+#define BACKUP_PATH  "./back_up/"
+
+upgrade_data_t g_update = {
+    .tar_dir = TAR_PATH,
+    .back_up_dir = BACKUP_PATH,
+    .scan_dir_list = {
+        {"/cumstor/"},
+        {"/cumstor/aa/"},
+        {"/cumstor/bb/"},
+        {"../../test_shell_mode"},
+        {0},        
+    },
+    .dir_depth = 0,
+};
+
+int if_add_scan_path(int agrc, char * argv[])
+{
+    int opt_index = 0;
+
+    while (g_update.scan_dir_list[g_update.dir_depth][0] != 0)
+    {
+        printf("dir %s \n", g_update.scan_dir_list[g_update.dir_depth]);
+        g_update.dir_depth++;
+    } 
+
+    while ( (opt_index = getopt(agrc, argv, "d:") ) != -1)
+    {
+        switch (opt_index) 
+        {
+            case 'a':
+                printf("choose the a option!\n");
+                break;
+            case 'd':
+                printf("choose the d option :%s \n", optarg);
+                if (g_update.dir_depth < 10)
+                {
+                    strcpy(g_update.scan_dir_list[g_update.dir_depth], optarg);
+                    g_update.dir_depth++;                    
+                }
+                break;
+            default :
+                printf("unknow!!%c!! \n", opt_index);
+                break;
+        }
+    }
+}
+
+int get_files(char *path, char *stri_name)
+{
+    if (path == NULL)
+        return -1;
+
+    DIR * dist_dir = opendir(path);
+    if (dist_dir == NULL)
+    {
+        perror("opendir failed :");
+        return -1;
+    }
+
+    
+    struct dirent *ptr_file = NULL;
+    
+    g_update.file_counter = 0;
+
+    if (stri_name == NULL)
+        stri_name = "nothing9527";
+
+    while ( (ptr_file = readdir(dist_dir)) != NULL) 
+    {
+        if (strcmp(ptr_file->d_name, ".") == 0 || strcmp(ptr_file->d_name, "..") == 0 || strstr(ptr_file->d_name, stri_name) != NULL)
+            continue;
+        printf("file is %s \n", ptr_file->d_name);
+        strcpy(g_update.file_list[g_update.file_counter], ptr_file->d_name);
+        g_update.file_counter++;
+    }
+    
+    closedir(dist_dir);       
+    return g_update.file_counter;
+}
+
+
+/*
+    int scan_counter = 0;
+    char scan_path[10][100] 
+*/
+int foreach_dir_files(char *path, char *back_files, FILE *bak_file)
+{
+    if (path == NULL)
+        return -1;
+
+    DIR * dist_dir = opendir(path);
+    if (dist_dir == NULL)
+    {
+        perror("opendir failed : ");
+        return -1;
+    }
+
+    int i = 0 ,counter = 0;
+    struct dirent *ptr_file = NULL;
+    
+    int back_up_files_counter = g_update.file_counter;
+    
+    char temp[200];
+    char cmd_str[200];
+
+    int position = 0;
+    position = strlen(path);
+    if (path[position] != '/')
+    {
+        path[position] = '/';
+        path[position + 1] = 0;
+    }
+
+    printf(" entry dir :%s \n", path);
+    while ( (ptr_file = readdir(dist_dir)) != NULL) 
+    {
+        if (strcmp(ptr_file->d_name, ".") == 0 || strcmp(ptr_file->d_name, "..") == 0)
+            continue;
+        printf("   %s  ", ptr_file->d_name);
+        for(i = 0; i < back_up_files_counter; i++)
+        {
+            if (strcmp(ptr_file->d_name, back_files + i * 100) == 0)
+            {
+                //printf("cp file %s \n", ptr_file->d_name);
+                sprintf(temp, "%s%s\n", path, ptr_file->d_name);
+                fputs(temp, bak_file);
+
+                sprintf(cmd_str, "cp -vrf %s%s %s", path, ptr_file->d_name, g_update.back_up_dir);
+                system(cmd_str);
+                break;
+            }               
+        }
+        counter++;
+    }
+    printf(" leaving dir :%s \n", path);
+    closedir(dist_dir);
+    return counter;    
+}
+
+int cp_file_2_backup(void)
+{
+
+    if ( mkdir(g_update.back_up_dir, 0775) < 0)
+    {
+        perror("mkdir failed : ");
+        if (chmod(g_update.back_up_dir, 0775) < 0)
+            perror("chmod failed : ");
+    }
+
+    int i = 0;
+    char buff[200] = {0};
+
+    FILE * bak_file = fopen("./back_up/backup.txt","w+");
+    for (i = 0; i < g_update.dir_depth; i++)
+    {
+        foreach_dir_files(g_update.scan_dir_list[i], (char *)g_update.file_list, bak_file);
+    }
+
+    fclose(bak_file); 
+         
+    return 0;
+}
+
+
+//"./back_up/backup.txt"
+int upgrade(void)
+{
+    
+    char buff[200] = {0};
+    char cmd_buff[200] = {0};
+    char file[100];
+    int i = 0;
+
+    //mkdir("./tar_dir/",0775);  
+    get_files(g_update.tar_dir, "upgrade.txt");
+    strcpy(file, g_update.tar_dir);
+    strcat(file, "upgrade.txt");
+
+    FILE *baka_file = fopen(file,"r+");
+    char *base_name = NULL;
+    int index = 0;
+
+    while ( fgets(buff, 200, baka_file) != NULL) 
+    {
+        printf("%s\n",buff);
+        index = strlen(buff);
+        if (buff[index - 1] == '\n')
+            buff[index - 1] = 0;
+
+        base_name = basename(buff);
+
+        printf("%s %lu \n",base_name, strlen(base_name));
+        for (i = 0; i < g_update.file_counter; i++)
+        {
+            if(strcmp(base_name, g_update.file_list[i]) == 0)
+            {
+                //printf("!!!!!!!!!===========================!!!!!!!!\n");
+                sprintf(cmd_buff, "cp -rvf %s%s %s", g_update.tar_dir ,g_update.file_list[i], buff);
+                system(cmd_buff);
+                break;
+            }
+        }               
+    }
+
+    fclose(baka_file);  
+
+    return 0;
+};
+
+int back_2_vertion(void)
+{
+    char buff[200] = {0};
+    char cmd_buff[200] = {0};
+    char file[100];
+    int i = 0;
+
+    get_files(g_update.back_up_dir, "backup.txt");
+    strcpy(file, g_update.back_up_dir);
+    strcat(file, "backup.txt");
+
+    FILE *baka_file = fopen(file,"r+");
+    char *base_name = NULL;
+    int index = 0;
+
+    while ( fgets(buff, 200, baka_file) != NULL) 
+    {
+        printf("%s\n",buff);
+        index = strlen(buff);
+        if (buff[index - 1] == '\n')
+            buff[index - 1] = 0;
+
+        base_name = basename(buff);
+
+        printf("%s %lu \n",base_name, strlen(base_name));
+        for (i = 0; i < g_update.file_counter; i++)
+        {
+            if(strcmp(base_name, g_update.file_list[i]) == 0)
+            {
+                sprintf(cmd_buff, "cp -rvf %s%s %s", g_update.back_up_dir ,g_update.file_list[i], buff);
+                system(cmd_buff);
+                break;
+            }
+        }               
+    }
+
+    fclose(baka_file);  
+    return 0;
+}
+
+int upgrade_file(void)
+{
+    char buff[200] = {0};
+    char cmd_buff[200] = {0};
+    char file[100];
+    int i = 0;
+ 
+    get_files(g_update.tar_dir, "upgrade.txt");
+
+    strcpy(file, g_update.tar_dir);
+    strcat(file, "upgrade.txt");
+    FILE *updata_file = fopen(file,"r+");
+
+    char *base_name = NULL;
+    int index = 0;
+
+    while ( fgets(buff, 200, updata_file) != NULL) 
+    {
+        printf("%s\n",buff);
+        index = strlen(buff);
+        if (buff[index - 1] == '\n')
+            buff[index - 1] = 0;
+        base_name = basename(buff);
+        
+        if (access(buff, F_OK) != -1)
+        {
+            sprintf(cmd_buff, "cp -rvf %s%s %s",  g_update.back_up_dir ,g_update.file_list[i], buff);
+            system(cmd_buff);                  
+        }          
+    }
+    fclose(updata_file);  
+    return 0;
+
+}
+
+int backup_file(void)
+{
+    char buff[200] = {0};
+    char cmd_buff[200] = {0};
+    char file[100];
+    int i = 0;
+
+    get_files(g_update.tar_dir, "upgrade.txt");
+
+    strcpy(file, g_update.tar_dir);
+    strcat(file, "upgrade.txt");
+    FILE *updata_file = fopen(file,"r+");
+
+    strcpy(file, g_update.back_up_dir);
+    strcat(file, "backup.txt");
+    FILE *bak_file = fopen(file,"w+");
+
+    char *base_name = NULL;
+    int index = 0;
+
+    while ( fgets(buff, 200, updata_file) != NULL) 
+    {
+        printf("%s\n",buff);
+        index = strlen(buff);
+        if (buff[index - 1] == '\n')
+            buff[index - 1] = 0;
+
+        if (access(buff, F_OK) != -1)
+        {
+            sprintf(cmd_buff, "cp -rvf %s %s%s", buff, g_update.back_up_dir ,g_update.file_list[i]);
+            system(cmd_buff);
+            
+            strcat(buff,'\n');
+            fputs(buff, bak_file);            
+        }          
+    }
+    fputs("/cunstor/aa/bb/", bak_file);
+    fclose(bak_file);
+    fclose(updata_file);  
+    return 0;
+
+}
+#ifndef __SCAN_FILES_H
+#define __SCAN_FILES_H
+
+#define MAX_NAME_LENGTH 100 
+
+typedef struct {
+
+    char file_list[50][MAX_NAME_LENGTH];
+    int file_counter;
+
+    char scan_dir_list[10][MAX_NAME_LENGTH];
+    int dir_depth;
+
+    char tar_dir[MAX_NAME_LENGTH];
+    char back_up_dir[MAX_NAME_LENGTH];
+
+} upgrade_data_t;
+
+extern int if_add_scan_path(int agrc, char * argv[]);
+extern int get_files(char *path, char *stri_name);
+extern int cp_file_2_backup(void);
+extern int upgrade(void);
+extern int back_2_vertion(void);
+
+#endif
