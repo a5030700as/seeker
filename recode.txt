@@ -1,0 +1,102 @@
+void UIInitDeal(void)
+{    
+    CHAR mac[6] = {0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
+	DefaultFunInit();
+	AppConfigRead();
+	AppUserFunInit();
+#ifdef MAC_ENABLE    
+    _NetworkGetMac(mac);
+    NetworkInit(mac);
+	UINetworkInit();
+#endif
+	UIParaInit();
+	//UIProtocolInit();
+	AppMCUInit();
+	AppiCloudInit();
+#ifdef INT_PROTOCOL
+	AppIntercomProtocolInit(mac);
+#endif
+}
+
+这个基本就是 架构的入口了 
+
+	
+	设计概念 ： 这个应用是围绕什么数据进行的呢？  存储的方式 是链表
+	
+	
+	第一： 主要使用到的是 http协议
+	第二： 
+	
+	AppiCloudInit(); 先分析 和服务器交互的这个吧
+	
+	看看先干了什么吧
+	
+	创建设备链表 保存设备信息(确定设备类型 楼 单元 房号 ) 加载数据库 获取MAC地址 作为登录账户 和 登录密码 ;
+	
+	iCloudSetDevInfo("CellCode",tmp);  //获取 小区识别码
+    iCloudSetDevInfo("FaceSavePath","/data/app/tmpface/"); //设置 人脸相片保存路径 
+	
+	然后选择 服务器类型  也就是 确定 主机端口 或者说是 确定 通信协议 
+	
+	
+	然后 登录； 进行交互 
+	iCloudLogin(_iCloudLoginCallback);
+	
+    iCloudSyncPause(); //为什么要 暂停呢？	
+    iCloudSetConnectCallback(_iCloudConnectCallback); //连接 回调？
+	
+	总体上来讲： 获取设备信息 登录账号和密码 然后 获取服务器地址， 开始登录 同步操作 ；
+	
+	变参 函数 什么时候用到 ？
+	很简单 就是 函数需要对 sprintf 封装的时候 就需要用到了； 不然 上层函数 无法传递参数给 sprintf ...
+	说白了 就是 可变参数的 链式传递 。。。。而已
+	
+	
+	数据库索引是怎么回事呢？ 
+	只是针对某一列 修改了 数据的默认全局扫描后返回结果的方式， 比如换了其他查找算法， 找到就返回之类的。。。。
+	
+	
+	1.SQLite数据库中有一个内置表，名为SQLITE_MASTER，此表中存储着当前数据库中所有表的相关信息，比如表的名称、用于创建此表的sql语句、索引、索引所属的表、创建索引的sql语句等。
+	2.SQLITE_MASTER表示只读的，只能对他进行读操作，写操作只能由系统自身触发，使用者没有权限。所有对用户自定义表的结构修改操作，会自定更新到此表。
+	
+	=============================================================
+	 
+	 封装 数据 ， 让函数去操作 ；
+	 
+	===========================================================
+	    iCloudInit("/data/app/info.db"); 这个是个大头！！！
+		{
+			IDeviceInit();
+			IProtocolInit();
+			ICloudURLInit(IDeviceGet());
+			iCloudDBInit(dbPath);  //三张表格 人脸 人员id 以及 卡 
+			
+			iCloudSyncInit();
+			iCloudFaceSyncInit();
+			iCloudCardSyncInit();
+			iCloudPersonSyncInit();
+		}
+		
+		服务器数据同步线程 干嘛使用的呢？ 周期性同步 服务器数据使用 
+		
+		if (pauseFlag == 0 && runningTask && runningTask->Start && IDeviceIsConnect()) 条件 暂停 其次 有任务 时间溢出 该任务的 启动函数存在 设备已经连接上网站 了 
+			
+			然后调用 对应的 同步函数 进行下一步操作 
+			
+			if (runningTask->Start(_iCloudSyncResult, _iCloudSyncProgress) == 0)
+			解释：  
+			这里是开了一个 消费性线程去执行 同步动作， 以抓取人脸图片为例子 ，每调用一次人脸图片获取都会 调用一次 _iCloudSyncProgress 表示当前进度
+			在线程退出的时候 _iCloudSyncResult 会调用这个 函数判断 是否线程执行完成 
+					
+			消费线程 干了什么呢？ 获取URL地址什么的 然后进行 遍历操作 拿数据罢了 
+			IProtocolDeal("http", "SyncFace", arg, _iCloudSyncFaceResult, NULL); 调用对应的 协议 获取数据而已
+			_iCloudSyncFaceResult 这里负责 发送信号量 而已 
+			
+void iCloudFaceSyncInit(void)
+{
+	iCloudSyncAddTask("SyncFace", iCloudSyncFaceStart, iCloudSyncFacePause, iCloudSyncFaceResume, NULL, NULL, faceSyncTime);
+	iCloudSyncAddTask("PostFace", iCloudSyncPostFaceStart, iCloudSyncPostFacePause, iCloudSyncPostFaceResume, NULL, NULL, faceSyncPostTime);
+	iCloudSyncAddTask("RemoveFace", iCloudSyncDelFaceStart, iCloudSyncDelFacePause, iCloudSyncDelFaceResume, NULL, NULL, faceSyncDelTime);
+}
+			
+			
