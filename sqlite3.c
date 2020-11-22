@@ -3,7 +3,72 @@
 #include <string.h>
 
 #include <sqlite3.h>
+/*
 
+
+sqlite3
+使用 .命令前缀
+数据库操作:
+	
+	首先，你需要建立一个目录 然后再 建立一个 表 然后再 插入内容 
+	.open test.bd  创建一个数据库
+	sqlite> create table student(id int, name varchar(20), age int); 记得 带分号 
+	sqlite> insert into student values(1, "snail", 25);				记得带分号  \" 记得转义啊 
+
+	sqlite> .tables 查询当前数据库有什么 表
+	
+	select * from student;
+	select * from table_name ;
+	
+	sqlite> .databases  查询当前有什么数据库 
+	seq  name             file                                                      
+	---  ---------------  ----------------------------------------------------------
+	0    main             /home/snail/vs_code/sqlite3_study/test.db 
+	
+	
+	原来会被解析为数据库的这几种类型:
+	int ---> INTEGER
+	varchar ----> TEXT
+	BLOB ----> BLOB
+	FLOAT ---> REAL
+	NUMERIC ----> NUMERIC
+	
+	现在看看
+	(id int , name varchar(20), blob isTrue, float length);
+	
+	===============================================================
+	可以 去 debian.org去查询 根据 头文件 安装指定的 数据包 就行了
+	
+	=================================================================
+	int sqlite3_open(
+  const char *filename,   /* Database filename (UTF-8) */
+  sqlite3 **ppDb          /* OUT: SQLite db handle */
+);
+
+
+	==================================================================
+	
+	create table if no exists student 
+	
+	查询的时候 可能需要回调函数 而已
+	
+	=====================================================================
+	int sqlite3_exec(
+  sqlite3*,                                  /* An open database */
+  const char *sql,                           /* SQL to be evaluated */
+  int (*callback)(void*,int,char**,char**),  /* Callback function */
+  void *,                                    /* 1st argument to callback */
+  char **errmsg                              /* Error msg written here */
+);
+
+	sqlite3_exec(sqlite3*, const char *sql, int (*callback)(void*,int,char**,char**),void *, char **errmsg);
+	==========================
+	drop table if exists [tableName];
+	CREATE TABLE IF NOT EXISTS [tableName] SELECT...
+	=========================================================
+	
+
+*/
 /*
     第一步创建一个 数据库文件 
 
