@@ -99,4 +99,8 @@ void iCloudFaceSyncInit(void)
 	iCloudSyncAddTask("RemoveFace", iCloudSyncDelFaceStart, iCloudSyncDelFacePause, iCloudSyncDelFaceResume, NULL, NULL, faceSyncDelTime);
 }
 			
-			
+		然后就是 解析cjson数据信息 保存图片而已。。。
+	
+	int HttpRegFace(char *facePath,FACE_INFO *faceInfo, char *serverFileUrl, char *faceFilePath);
+	
+	ret = IProtocolDeal("http", "Login", arg, (void*)resultFun, NULL); //回调的本质就是 去解析cjson格式的文件 		
